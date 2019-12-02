@@ -123,7 +123,129 @@ void StandbyState::onActiveToolChange(Editor* editor, tools::Tool* tool)
     editor->invalidate();
   }
 }
-
+bool moveLayer(Editor* editor, MouseMessage* msg, Layer* layer){
+        if (layer) {
+            // TODO we should be able to move the `Background' with tiled mode
+            if (layer->isBackground()) {
+                StatusBar::instance()->showTip(1000,
+                                               "The background layer cannot be moved");
+            }
+            else if (!layer->isVisibleHierarchy()) {
+                StatusBar::instance()->showTip(1000,
+                                               "Layer '%s' is hidden", layer->name().c_str());
+            }
+            else if (!layer->isMovable() || !layer->isEditableHierarchy()) {
+                StatusBar::instance()->showTip(1000,
+                                               "Layer '%s' is locked", layer->name().c_str());
+            }
+            else {
+                MovingCelCollect collect(editor, layer);
+                if (collect.empty()) {
+                    StatusBar::instance()->showTip(1000, "Nothing to move");
+                    
+                }
+                else {
+                    try {
+                        // Change to MovingCelState
+                        HandleType handle = MovePixelsHandle;
+                        if (resizeCelBounds(editor).contains(msg->position()))
+                            handle = ScaleSEHandle;
+                        
+                        MovingCelState* newState = new MovingCelState(
+                                                                      editor, msg, handle, collect);
+                        editor->setState(EditorStatePtr(newState));
+                    }
+                    catch (const LockedDocException&) {
+                        // TODO break the background task that is locking this sprite
+                        StatusBar::instance()->showTip(1000, "Sprite is used by a backup/data recovery task");}}}
+            return true;}
+    else
+        return false;
+}
+bool processSliceClick(Editor* editor, MouseMessage* msg, Ink* clikedInk){
+        if (clickedInk->isSlice()) {
+            EditorHit hit = editor->calcHit(msg->position());
+            switch (hit.type()) {
+                case EditorHit::SliceBounds:
+                case EditorHit::SliceCenter:
+                    if (msg->left()) {
+                        // If we click outside all slices, we clear the selection of slices.
+                        if (!hit.slice() || !site.selectedSlices().contains(hit.slice()->id())) {
+                            editor->clearSlicesSelection();
+                            editor->selectSlice(hit.slice());
+                            
+                            site = Site();
+                            editor->getSite(&site);
+                        }
+                        
+                        MovingSliceState* newState = new MovingSliceState(
+                                                                          editor, msg, hit, site.selectedSlices());
+                        editor->setState(EditorStatePtr(newState));
+                    }
+                    else {
+                        Menu* popupMenu = AppMenus::instance()->getSlicePopupMenu();
+                        if (popupMenu) {
+                            Params params;
+                            // When the editor doesn't have a set of selected slices,
+                            // we set the specific clicked slice for the commands (in
+                            // other case, those commands will get the selected set of
+                            // slices from Site::selectedSlices() field).
+                            if (!editor->hasSelectedSlices())
+                                params.set("id", base::convert_to<std::string>(hit.slice()->id()).c_str());
+                            AppMenuItem::setContextParams(params);
+                            popupMenu->showPopup(msg->position());
+                            AppMenuItem::setContextParams(Params());
+                        }
+                    }
+                    return true;
+            }
+        }
+}
+bool moveSelection(Editor* editor, MouseMessage* msg, Ink* clikedInk, Decorator::Handles handle, Layer* layer){
+        auto activeToolManager = App::instance()->activeToolManager();
+        if (clickedInk->isSelection() &&
+            ((activeToolManager->selectedTool() &&
+              activeToolManager->selectedTool()->getInk(0)->isSelection()) ||
+             (activeToolManager->quickTool() &&
+              activeToolManager->quickTool()->getInk(0)->isSelection()))) {
+                 // Transform selected pixels
+                 if (editor->isActive() &&
+                     document->isMaskVisible() &&
+                     m_decorator->getTransformHandles(editor) &&
+                     (!Preferences::instance().selection.modifiersDisableHandles() ||
+                      msg->modifiers() == kKeyNoneModifier)) {
+                         TransformHandles* transfHandles = m_decorator->getTransformHandles(editor);
+                         // Get the handle covered by the mouse.
+                         HandleType handle = transfHandles->getHandleAtPoint(editor, msg->position(), getTransformation(editor));
+                         if (handle != NoHandle) {
+                             int x, y, opacity;
+                             Image* image = site.image(&x, &y, &opacity);
+                             if (layer && image) {
+                                 if (!layer->isEditableHierarchy()) {
+                                     StatusBar::instance()->showTip(1000, "Layer '%s' is locked", layer->name().c_str());
+                                     return true;
+                                 }
+                                 // Change to MovingPixelsState
+                                 transformSelection(editor, msg, handle);
+                             } return true;}}
+                 // Move selection edges
+                 if (overSelectionEdges(editor, msg->position())) {
+                     transformSelection(editor, msg, MoveSelectionHandle);
+                     return true;}
+                 // Move selected pixels
+                 if (layer && editor->canStartMovingSelectionPixels() && msg->left()) {
+                     if (!layer->isEditableHierarchy()) {
+                         StatusBar::instance()->showTip(1000, "Layer '%s' is locked", layer->name().c_str());
+                         return true;}
+                     // Change to MovingPixelsState
+                     transformSelection(editor, msg, MovePixelsHandle);
+                     return true;
+                 }
+             
+             }
+    
+}
+    
 bool StandbyState::onMouseDown(Editor* editor, MouseMessage* msg)
 {
   if (editor->hasCapture())
@@ -182,49 +304,9 @@ bool StandbyState::onMouseDown(Editor* editor, MouseMessage* msg)
         }
       }
     }
-
-    if (layer) {
-      // TODO we should be able to move the `Background' with tiled mode
-      if (layer->isBackground()) {
-        StatusBar::instance()->showTip(1000,
-          "The background layer cannot be moved");
-      }
-      else if (!layer->isVisibleHierarchy()) {
-        StatusBar::instance()->showTip(1000,
-          "Layer '%s' is hidden", layer->name().c_str());
-      }
-      else if (!layer->isMovable() || !layer->isEditableHierarchy()) {
-        StatusBar::instance()->showTip(1000,
-          "Layer '%s' is locked", layer->name().c_str());
-      }
-      else {
-        MovingCelCollect collect(editor, layer);
-        if (collect.empty()) {
-          StatusBar::instance()->showTip(
-            1000, "Nothing to move");
-        }
-        else {
-          try {
-            // Change to MovingCelState
-            HandleType handle = MovePixelsHandle;
-            if (resizeCelBounds(editor).contains(msg->position()))
-              handle = ScaleSEHandle;
-
-            MovingCelState* newState = new MovingCelState(
-              editor, msg, handle, collect);
-            editor->setState(EditorStatePtr(newState));
-          }
-          catch (const LockedDocException&) {
-            // TODO break the background task that is locking this sprite
-            StatusBar::instance()->showTip(
-              1000, "Sprite is used by a backup/data recovery task");
-          }
-        }
-      }
-    }
-
+//refactor the if layer statement as a finction to return boolean results
+  if (moveLayer(editor,msg, layer))
     return true;
-  }
 
   // Call the eyedropper command
   if (clickedInk->isEyedropper()) {
@@ -232,104 +314,20 @@ bool StandbyState::onMouseDown(Editor* editor, MouseMessage* msg)
     callEyedropper(editor, msg);
     return true;
   }
+//refactor isSlice check
+  if(processSliceClick(editor,msg, clikedInk))
+    return true;
 
-  if (clickedInk->isSlice()) {
-    EditorHit hit = editor->calcHit(msg->position());
-    switch (hit.type()) {
-      case EditorHit::SliceBounds:
-      case EditorHit::SliceCenter:
-        if (msg->left()) {
-          // If we click outside all slices, we clear the selection of slices.
-          if (!hit.slice() || !site.selectedSlices().contains(hit.slice()->id())) {
-            editor->clearSlicesSelection();
-            editor->selectSlice(hit.slice());
-
-            site = Site();
-            editor->getSite(&site);
-          }
-
-          MovingSliceState* newState = new MovingSliceState(
-            editor, msg, hit, site.selectedSlices());
-          editor->setState(EditorStatePtr(newState));
-        }
-        else {
-          Menu* popupMenu = AppMenus::instance()->getSlicePopupMenu();
-          if (popupMenu) {
-            Params params;
-            // When the editor doesn't have a set of selected slices,
-            // we set the specific clicked slice for the commands (in
-            // other case, those commands will get the selected set of
-            // slices from Site::selectedSlices() field).
-            if (!editor->hasSelectedSlices())
-              params.set("id", base::convert_to<std::string>(hit.slice()->id()).c_str());
-            AppMenuItem::setContextParams(params);
-            popupMenu->showPopup(msg->position());
-            AppMenuItem::setContextParams(Params());
-          }
-        }
-        return true;
-    }
-  }
 
   // Only if the selected tool or quick tool is selection, we give the
   // possibility to transform/move the selection. In other case,
   // e.g. when selection is used with right-click mode, the
   // transformation is disabled.
-  auto activeToolManager = App::instance()->activeToolManager();
-  if (clickedInk->isSelection() &&
-      ((activeToolManager->selectedTool() &&
-        activeToolManager->selectedTool()->getInk(0)->isSelection()) ||
-       (activeToolManager->quickTool() &&
-        activeToolManager->quickTool()->getInk(0)->isSelection()))) {
-    // Transform selected pixels
-    if (editor->isActive() &&
-        document->isMaskVisible() &&
-        m_decorator->getTransformHandles(editor) &&
-        (!Preferences::instance().selection.modifiersDisableHandles() ||
-         msg->modifiers() == kKeyNoneModifier)) {
-      TransformHandles* transfHandles = m_decorator->getTransformHandles(editor);
-
-      // Get the handle covered by the mouse.
-      HandleType handle = transfHandles->getHandleAtPoint(editor,
-        msg->position(),
-        getTransformation(editor));
-
-      if (handle != NoHandle) {
-        int x, y, opacity;
-        Image* image = site.image(&x, &y, &opacity);
-        if (layer && image) {
-          if (!layer->isEditableHierarchy()) {
-            StatusBar::instance()->showTip(1000,
-              "Layer '%s' is locked", layer->name().c_str());
-            return true;
-          }
-
-          // Change to MovingPixelsState
-          transformSelection(editor, msg, handle);
-        }
-        return true;
-      }
-    }
-
-    // Move selection edges
-    if (overSelectionEdges(editor, msg->position())) {
-      transformSelection(editor, msg, MoveSelectionHandle);
+  if (moveSelection(editor,msg,clikedInk, handle,layer))
       return true;
-    }
+  
 
-    // Move selected pixels
-    if (layer && editor->canStartMovingSelectionPixels() && msg->left()) {
-      if (!layer->isEditableHierarchy()) {
-        StatusBar::instance()->showTip(1000,
-          "Layer '%s' is locked", layer->name().c_str());
-        return true;
-      }
-
-      // Change to MovingPixelsState
-      transformSelection(editor, msg, MovePixelsHandle);
-      return true;
-    }
-  }
+  
 
   // Start the Tool-Loop
   if (layer && (layer->isImage() || clickedInk->isSelection())) {
@@ -380,7 +378,6 @@ bool StandbyState::onMouseMove(Editor* editor, MouseMessage* msg)
       callEyedropper(editor, msg);
     }
   }
-
   editor->updateStatusBar();
   return true;
 }
