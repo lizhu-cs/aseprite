@@ -201,6 +201,8 @@ bool processSliceClick(Editor* editor, MouseMessage* msg, Ink* clikedInk){
             }
         }
 }
+}
+
 bool moveSelection(Editor* editor, MouseMessage* msg, Ink* clikedInk, Decorator::Handles handle, Layer* layer){
         auto activeToolManager = App::instance()->activeToolManager();
         if (clickedInk->isSelection() &&
@@ -244,6 +246,7 @@ bool moveSelection(Editor* editor, MouseMessage* msg, Ink* clikedInk, Decorator:
              
              }
     
+}
 }
     
 bool StandbyState::onMouseDown(Editor* editor, MouseMessage* msg)
@@ -367,6 +370,8 @@ bool StandbyState::onMouseUp(Editor* editor, MouseMessage* msg)
   editor->releaseMouse();
   return true;
 }
+}
+
 
 bool StandbyState::onMouseMove(Editor* editor, MouseMessage* msg)
 {
@@ -420,6 +425,7 @@ bool StandbyState::onDoubleClick(Editor* editor, MouseMessage* msg)
 
   return false;
 }
+
 
 bool StandbyState::onSetCursor(Editor* editor, const gfx::Point& mouseScreenPos)
 {
@@ -513,6 +519,7 @@ bool StandbyState::onSetCursor(Editor* editor, const gfx::Point& mouseScreenPos)
       }
     }
   }
+
 
   // Draw
   if (editor->canDraw()) {
@@ -1081,5 +1088,6 @@ bool StandbyState::Decorator::getSymmetryHandles(Editor* editor, Handles& handle
   }
   return false;
 }
+
 
 } // namespace app
