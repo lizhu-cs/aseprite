@@ -157,11 +157,19 @@ bool moveLayer(Editor* editor, MouseMessage* msg, Layer* layer){
                     }
                     catch (const LockedDocException&) {
                         // TODO break the background task that is locking this sprite
-                        StatusBar::instance()->showTip(1000, "Sprite is used by a backup/data recovery task");}}}
-            return true;}
+                        StatusBar::instance()->showTip(1000, "Sprite is used by a backup/data recovery task");}
+                    
+                }
+            
+            
+        }
+            return true;
+            
+        }
     else
         return false;
 }
+
 bool processSliceClick(Editor* editor, MouseMessage* msg, Ink* clikedInk){
         if (clickedInk->isSlice()) {
             EditorHit hit = editor->calcHit(msg->position());
@@ -201,7 +209,7 @@ bool processSliceClick(Editor* editor, MouseMessage* msg, Ink* clikedInk){
             }
         }
 }
-}
+
 
 bool moveSelection(Editor* editor, MouseMessage* msg, Ink* clikedInk, Decorator::Handles handle, Layer* layer){
         auto activeToolManager = App::instance()->activeToolManager();
@@ -247,7 +255,7 @@ bool moveSelection(Editor* editor, MouseMessage* msg, Ink* clikedInk, Decorator:
              }
     
 }
-}
+
     
 bool StandbyState::onMouseDown(Editor* editor, MouseMessage* msg)
 {
