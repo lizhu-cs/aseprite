@@ -1768,15 +1768,8 @@ bool Manager::processFocusMovementMessage(Message* msg)
     c = 0;
 
     // Create a list of possible candidates to receive the focus
-    for (it=focus_widget; it; it=next_widget(it)) {
-      if (does_accept_focus(it) && !(child_accept_focus(it, true)))
-        list[c++] = it;
-    }
-    for (it=window; it != focus_widget; it=next_widget(it)) {
-      if (does_accept_focus(it) && !(child_accept_focus(it, true)))
-        list[c++] = it;
-    }
-
+    list = createList(focus, window, list);
+    
     // Depending on the pressed key...
     switch (static_cast<KeyMessage*>(msg)->scancode()) {
 
@@ -1807,13 +1800,8 @@ bool Manager::processFocusMovementMessage(Message* msg)
           c = (focus_widget ? 1: 0);
 
           // Rearrange the list
-          for (int i=c; i<count-1; ++i) {
-            for (int j=i+1; j<count; ++j) {
-              // Sort the list in ascending order
-              if ((*cmp)(list[i], pt.x, pt.y) > (*cmp)(list[j], pt.x, pt.y))
-                std::swap(list[i], list[j]);
-            }
-          }
+          list = reArangeList(list,c,count);
+
 
 #ifdef REPORT_FOCUS_MOVEMENT
           // Print list of widgets
@@ -1841,6 +1829,31 @@ bool Manager::processFocusMovementMessage(Message* msg)
   }
 
   return ret;
+}
+
+Widget createList(Widget* focus, Window* window, Widget* list){
+    for (it=focus_widget; it; it=next_widget(it)) {
+        if (does_accept_focus(it) && !(child_accept_focus(it, true)))
+            list[c++] = it;
+    }
+    for (it=window; it != focus_widget; it=next_widget(it)) {
+        if (does_accept_focus(it) && !(child_accept_focus(it, true)))
+            list[c++] = it;
+    }
+
+    return list;
+    }
+    
+Widget reArangeList(Widget* list, int c, int count){
+        for (int i=c; i<count-1; ++i) {
+            for (int j=i+1; j<count; ++j) {
+                // Sort the list in ascending order
+                if ((*cmp)(list[i], pt.x, pt.y) > (*cmp)(list[j], pt.x, pt.y))
+                    std::swap(list[i], list[j]);
+            }
+        }
+    return list;
+
 }
 
 static int count_widgets_accept_focus(Widget* widget)
