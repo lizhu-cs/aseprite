@@ -371,9 +371,10 @@ void Menu::onSizeHint(SizeHintEvent& ev)
 
   ev.setSizeHint(size);
 }
+
+
     
-    
-    void MenuBox::userPressOutOfWidget(Message* msg, Menu* menu, Widget* picked){
+void MenuBox::userPressOutOfWidget(Message* msg, Menu* menu, Widget* picked){
         // Get the widget below the mouse cursor
     
         if (picked) {
@@ -414,8 +415,8 @@ void Menu::onSizeHint(SizeHintEvent& ev)
                 menu->unhighlightItem();
             }
         }
-    }
-}}
+    
+}
 
 bool MenuBox:: CasekKeyDownMessage(Message* msg, Menu* menu){
     if (menu) {
@@ -583,9 +584,12 @@ bool MenuBox:: CasekKeyDownMessage(Message* msg, Menu* menu){
             // Return true if we've already consumed the key.
         }else
             return false;
+        
     
 }
+    
 }
+
 
 bool MenuBox::onProcessMessage(Message* msg)
 {
@@ -845,7 +849,9 @@ bool kOpenOrkOpenMenuItemMessage(Message* msg){
 }
 
 
+
 }
+
 
     
 bool MenuItem::onProcessMessage(Message* msg)
@@ -1047,6 +1053,7 @@ void Menu::highlightItem(MenuItem* menuitem, bool click, bool open_submenu, bool
     }
   }
 }
+
 
 void Menu::unhighlightItem()
 {
