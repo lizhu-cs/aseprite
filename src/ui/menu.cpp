@@ -415,7 +415,8 @@ void Menu::onSizeHint(SizeHintEvent& ev)
             }
         }
     }
-    }
+}}
+
 bool MenuBox:: CasekKeyDownMessage(Message* msg, Menu* menu){
     if (menu) {
         MenuItem* selected;
@@ -584,6 +585,8 @@ bool MenuBox:: CasekKeyDownMessage(Message* msg, Menu* menu){
             return false;
     
 }
+}
+
 bool MenuBox::onProcessMessage(Message* msg)
 {
   Menu* menu = MenuBox::getMenu();
@@ -700,6 +703,7 @@ void MenuBox::onSizeHint(SizeHintEvent& ev)
 
   ev.setSizeHint(size);
 }
+
     
 bool kOpenOrkOpenMenuItemMessage(Message* msg){
         if (msg->type() == kOpenMessage) {
@@ -838,7 +842,11 @@ bool kOpenOrkOpenMenuItemMessage(Message* msg){
     else if (msg->type() == kExecuteMenuItemMessage) {
         onClick();
         return true;
-    }
+}
+
+
+}
+
     
 bool MenuItem::onProcessMessage(Message* msg)
 {
